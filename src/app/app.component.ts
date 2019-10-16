@@ -1,5 +1,6 @@
 import { Component } from '@angular/core'
 import { AES } from 'crypto-ts'
+import { Sha256 } from './sha256'
 
 @Component({
   selector: 'app-root',
@@ -16,5 +17,7 @@ export class AppComponent {
 
   constructor() {
     this.hash = AES.encrypt('message', 'test').toString();
+    var test = Sha256.hash('test', 'string')
+    console.log(test)
   }
 }
