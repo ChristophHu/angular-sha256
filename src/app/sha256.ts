@@ -1,37 +1,37 @@
 export class Sha256 {
-
-    /**
-     * Generates SHA-256 hash of string.
-     *
-     * @param   {string} msg - (Unicode) string to be hashed.
-     * @param   {Object} [options]
-     * @param   {string} [options.msgFormat=string] - Message format: 'string' for JavaScript string
-     *   (gets converted to UTF-8 for hashing); 'hex-bytes' for string of hex bytes ('616263' ≡ 'abc') .
-     * @param   {string} [options.outFormat=hex] - Output format: 'hex' for string of contiguous
-     *   hex bytes; 'hex-w' for grouping hex bytes into groups of (4 byte / 8 character) words.
-     * @returns {string} Hash of msg as hex character string.
-     *
-     * @example
-     *   import Sha256 from './sha256.js';
-     *   const hash = Sha256.hash('abc'); // 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'
+    /* generate a sha256-hash of a message
+        import { Sha256 } from './sha256.ts'
+        const hash = Sha256.hash('abc')
+        // ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
      */
-    static hash(msg: string, options: any): string {
-        const defaults = { msgFormat: 'string', outFormat: 'hex' };
-        const opt = Object.assign(defaults, options);
-        var output: string[] = []
-console.log(msg)
-        // note use throughout this routine of 'n >>> 0' to coerce Number 'n' to unsigned 32-bit integer
 
-        switch (opt.msgFormat) {
-            default: // default is to convert string to UTF-8, as SHA only deals with byte-streams
+    static hash(message: string, options?: any): string {
+        const defaults = { messageFormat: 'string', outputFormat: 'hex' }
+        const optional = Object.assign(defaults, options)
+        var sha256Hash: string[] = []
+
+        switch (optional.messageFormat) {
             case 'string':   
-                msg = utf8Encode(msg);     
-                break;
+                message = utf8Encode(message)     
+                break
             case 'hex-bytes':
-                msg = hexBytesToString(msg); 
-                break; // mostly for running tests
+                message = hexBytesToString(message)
+                break
+            default:
         }
-console.log(msg)
+
+        function utf8Encode(message: string) {
+            try {
+                return new TextEncoder().encode(message).reduce((prev, curr) => prev + String.fromCharCode(curr), '')
+            } catch (e) {
+                return unescape(encodeURIComponent(message))
+            }
+        }
+
+        function hexBytesToString(message: string) {
+            const str = message.replace(' ', '')
+            return str=='' ? '' : str.match(/.{2}/g).map(byte => String.fromCharCode(parseInt(byte, 16))).join('')
+        }
 
         // constants [§4.2.2]
         const K = [
@@ -42,63 +42,61 @@ console.log(msg)
             0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
             0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
             0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-            0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2 ];
+            0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2 ]
 
         // initial hash value [§5.3.3]
         const H = [
-            0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19 ];
+            0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19 ]
 
         // PREPROCESSING [§6.2.1]
+        message += String.fromCharCode(0x80);  // add trailing '1' bit (+ 0's padding) to string [§5.1.1]
 
-        msg += String.fromCharCode(0x80);  // add trailing '1' bit (+ 0's padding) to string [§5.1.1]
-console.log(msg)
-        // convert string msg into 512-bit blocks (array of 16 32-bit integers) [§5.2.1]
-        const l = msg.length/4 + 2; // length (in 32-bit integers) of msg + ‘1’ + appended length
+        // convert string message into 512-bit blocks (array of 16 32-bit integers) [§5.2.1]
+        const l = message.length/4 + 2; // length (in 32-bit integers) of message + ‘1’ + appended length
         const N = Math.ceil(l/16);  // number of 16-integer (512-bit) blocks required to hold 'l' ints
         const M = new Array(N);     // message M is N×16 array of 32-bit integers
 
         for (let i=0; i<N; i++) {
-            M[i] = new Array(16);
+            M[i] = new Array(16)
             for (let j=0; j<16; j++) { // encode 4 chars per integer (64 per block), big-endian encoding
-                M[i][j] = (msg.charCodeAt(i*64+j*4+0)<<24) | (msg.charCodeAt(i*64+j*4+1)<<16)
-                        | (msg.charCodeAt(i*64+j*4+2)<< 8) | (msg.charCodeAt(i*64+j*4+3)<< 0);
-            } // note running off the end of msg is ok 'cos bitwise ops on NaN return 0
+                M[i][j] = (message.charCodeAt(i*64+j*4+0)<<24) | (message.charCodeAt(i*64+j*4+1)<<16)
+                        | (message.charCodeAt(i*64+j*4+2)<< 8) | (message.charCodeAt(i*64+j*4+3)<< 0)
+            } // note running off the end of message is ok 'cos bitwise ops on NaN return 0
         }
         // add length (in bits) into final pair of 32-bit integers (big-endian) [§5.1.1]
         // note: most significant word would be (len-1)*8 >>> 32, but since JS converts
         // bitwise-op args to 32 bits, we need to simulate this by arithmetic operators
-        const lenHi = ((msg.length-1)*8) / Math.pow(2, 32);
-        const lenLo = ((msg.length-1)*8) >>> 0;
-        M[N-1][14] = Math.floor(lenHi);
-        M[N-1][15] = lenLo;
+        const lenHi = ((message.length-1)*8) / Math.pow(2, 32)
+        const lenLo = ((message.length-1)*8) >>> 0
+        M[N-1][14] = Math.floor(lenHi)
+        M[N-1][15] = lenLo
 
 
         // HASH COMPUTATION [§6.2.2]
-
         for (let i=0; i<N; i++) {
-            const W = new Array(64);
+            const W = new Array(64)
 
             // 1 - prepare message schedule 'W'
-            for (let t=0;  t<16; t++) W[t] = M[i][t];
+            for (let t=0;  t<16; t++) W[t] = M[i][t]
             for (let t=16; t<64; t++) {
-                W[t] = (Sha256.σ1(W[t-2]) + W[t-7] + Sha256.σ0(W[t-15]) + W[t-16]) >>> 0;
+                W[t] = (Sha256.σ1(W[t-2]) + W[t-7] + Sha256.σ0(W[t-15]) + W[t-16]) >>> 0
             }
 
             // 2 - initialise working variables a, b, c, d, e, f, g, h with previous hash value
-            let a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
+            let a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7]
 
             // 3 - main loop (note '>>> 0' for 'addition modulo 2^32')
             for (let t=0; t<64; t++) {
-                const T1 = h + Sha256.Σ1(e) + Sha256.Ch(e, f, g) + K[t] + W[t];
-                const T2 =     Sha256.Σ0(a) + Sha256.Maj(a, b, c);
-                h = g;
-                g = f;
-                f = e;
-                e = (d + T1) >>> 0;
-                d = c;
-                c = b;
-                b = a;
-                a = (T1 + T2) >>> 0;
+                const T1 = h + Sha256.Σ1(e) + Sha256.Ch(e, f, g) + K[t] + W[t]
+                const T2 =     Sha256.Σ0(a) + Sha256.Maj(a, b, c)
+                h = g
+                g = f
+                f = e
+                e = (d + T1) >>> 0
+                d = c
+                c = b
+                b = a
+                a = (T1 + T2) >>> 0
             }
 
             // 4 - compute the new intermediate hash value (note '>>> 0' for 'addition modulo 2^32')
@@ -114,32 +112,13 @@ console.log(msg)
 
         // convert H0..H7 to hex strings (with leading zeros)
         for (let h=0; h<H.length; h++) {
-            //H[h] = Number(H[h].toString(16).slice(-8))
-            output[h] = H[h].toString(16).slice(-8)
-            console.log(H[h].toString(16).slice(-8))
+            sha256Hash[h] = H[h].toString(16).slice(-8)
         }
         
         // concatenate H0..H7, with separator if required
-        const separator = opt.outFormat=='hex-w' ? ' ' : ''
+        const separator = optional.outFormat=='hex-w' ? ' ' : ''
 
-console.log(H)
-        //return H.join(separator);
-        return output.join(separator)
-
-        /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  */
-
-        function utf8Encode(str: string) {
-            try {
-                return new TextEncoder().encode(str).reduce((prev, curr) => prev + String.fromCharCode(curr), '');
-            } catch (e) { // no TextEncoder available?
-                return unescape(encodeURIComponent(str)); // monsur.hossa.in/2012/07/20/utf-8-in-javascript.html
-            }
-        }
-
-        function hexBytesToString(hexStr: string) { // convert string of hex numbers to a string of chars (eg '616263' -> 'abc').
-            const str = hexStr.replace(' ', ''); // allow space-separated groups
-            return str=='' ? '' : str.match(/.{2}/g).map(byte => String.fromCharCode(parseInt(byte, 16))).join('');
-        }
+        return sha256Hash.join(separator)
     }
 
 
@@ -152,16 +131,27 @@ console.log(H)
         return (x >>> n) | (x << (32-n));
     }
 
-
     /**
      * Logical functions [§4.1.2].
      * @private
      */
-    static Σ0(x: number) { return Sha256.ROTR(2,  x) ^ Sha256.ROTR(13, x) ^ Sha256.ROTR(22, x); }
-    static Σ1(x: number) { return Sha256.ROTR(6,  x) ^ Sha256.ROTR(11, x) ^ Sha256.ROTR(25, x); }
-    static σ0(x: number) { return Sha256.ROTR(7,  x) ^ Sha256.ROTR(18, x) ^ (x>>>3);  }
-    static σ1(x: number) { return Sha256.ROTR(17, x) ^ Sha256.ROTR(19, x) ^ (x>>>10); }
-    static Ch(x: number, y: number, z: number)  { return (x & y) ^ (~x & z); }          // 'choice'
-    static Maj(x: number, y: number, z: number) { return (x & y) ^ (x & z) ^ (y & z); } // 'majority'
+    static Σ0(x: number) { 
+        return Sha256.ROTR(2,  x) ^ Sha256.ROTR(13, x) ^ Sha256.ROTR(22, x) 
+    }
+    static Σ1(x: number) { 
+        return Sha256.ROTR(6,  x) ^ Sha256.ROTR(11, x) ^ Sha256.ROTR(25, x) 
+    }
+    static σ0(x: number) { 
+        return Sha256.ROTR(7,  x) ^ Sha256.ROTR(18, x) ^ (x>>>3)
+    }
+    static σ1(x: number) { 
+        return Sha256.ROTR(17, x) ^ Sha256.ROTR(19, x) ^ (x>>>10) 
+    }
+    static Ch(x: number, y: number, z: number)  { 
+        return (x & y) ^ (~x & z) 
+    }          // 'choice'
+    static Maj(x: number, y: number, z: number) { 
+        return (x & y) ^ (x & z) ^ (y & z) 
+    } // 'majority'
 
 }

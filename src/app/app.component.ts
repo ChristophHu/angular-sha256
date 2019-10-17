@@ -19,5 +19,7 @@ export class AppComponent {
     this.hash = AES.encrypt('message', 'test').toString();
     var test = Sha256.hash('test', 'string')
     console.log(test)
+    const x = Sha256.hash('abc')
+    console.log(x)
   }
 }
