@@ -5,7 +5,7 @@ import { Sha256 } from './sha256'
   selector: 'app-root',
   template: `
     <input type="text" #input>
-    <button (click)="toHash(input.value)"></button>
+    <button (click)="toHash(input.value)">Hash generieren</button>
     <hr>
     Hash: {{ hash }}
   `,

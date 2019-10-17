@@ -1,8 +1,8 @@
 export class Sha256 {
     /* generate a sha256-hash of a message
         import { Sha256 } from './sha256.ts'
-        const hash = Sha256.hash('abc')
-        // ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
+        this.hash = Sha256.hash('test')
+        // 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
      */
 
     static hash(message: string, options?: any): string {
