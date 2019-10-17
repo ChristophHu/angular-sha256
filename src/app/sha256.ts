@@ -33,7 +33,7 @@ export class Sha256 {
             return str=='' ? '' : str.match(/.{2}/g).map(byte => String.fromCharCode(parseInt(byte, 16))).join('')
         }
 
-        // constants [§4.2.2]
+        // sequence of constant words K^0,...,K^64
         const K = [
             0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
             0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -44,12 +44,13 @@ export class Sha256 {
             0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
             0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2 ]
 
-        // initial hash value [§5.3.3]
+        // initial hash value H^0,...,H^7
         const H = [
             0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19 ]
 
-        // PREPROCESSING [§6.2.1]
-        message += String.fromCharCode(0x80);  // add trailing '1' bit (+ 0's padding) to string [§5.1.1]
+        // preprocessing
+        // append the bit "1" to the end of the message
+        message += String.fromCharCode(0x80)
 
         // convert string message into 512-bit blocks (array of 16 32-bit integers) [§5.2.1]
         const l = message.length/4 + 2; // length (in 32-bit integers) of message + ‘1’ + appended length
@@ -58,34 +59,35 @@ export class Sha256 {
 
         for (let i=0; i<N; i++) {
             M[i] = new Array(16)
-            for (let j=0; j<16; j++) { // encode 4 chars per integer (64 per block), big-endian encoding
+            // big-endian encoding -encode 4 chars per integer
+            for (let j=0; j<16; j++) {
                 M[i][j] = (message.charCodeAt(i*64+j*4+0)<<24) | (message.charCodeAt(i*64+j*4+1)<<16)
                         | (message.charCodeAt(i*64+j*4+2)<< 8) | (message.charCodeAt(i*64+j*4+3)<< 0)
-            } // note running off the end of message is ok 'cos bitwise ops on NaN return 0
+            }
         }
-        // add length (in bits) into final pair of 32-bit integers (big-endian) [§5.1.1]
-        // note: most significant word would be (len-1)*8 >>> 32, but since JS converts
-        // bitwise-op args to 32 bits, we need to simulate this by arithmetic operators
+        
         const lenHi = ((message.length-1)*8) / Math.pow(2, 32)
         const lenLo = ((message.length-1)*8) >>> 0
         M[N-1][14] = Math.floor(lenHi)
         M[N-1][15] = lenLo
 
 
-        // HASH COMPUTATION [§6.2.2]
+        // main-loop
         for (let i=0; i<N; i++) {
             const W = new Array(64)
 
-            // 1 - prepare message schedule 'W'
-            for (let t=0;  t<16; t++) W[t] = M[i][t]
+            // 1 - prepare message
+            for (let t=0;  t<16; t++) {
+                W[t] = M[i][t]
+            }
             for (let t=16; t<64; t++) {
                 W[t] = (Sha256.σ1(W[t-2]) + W[t-7] + Sha256.σ0(W[t-15]) + W[t-16]) >>> 0
             }
 
-            // 2 - initialise working variables a, b, c, d, e, f, g, h with previous hash value
+            // 2 - initialise register
             let a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7]
 
-            // 3 - main loop (note '>>> 0' for 'addition modulo 2^32')
+            // 3 - main loop SHA-256 compression function
             for (let t=0; t<64; t++) {
                 const T1 = h + Sha256.Σ1(e) + Sha256.Ch(e, f, g) + K[t] + W[t]
                 const T2 =     Sha256.Σ0(a) + Sha256.Maj(a, b, c)
@@ -99,7 +101,7 @@ export class Sha256 {
                 a = (T1 + T2) >>> 0
             }
 
-            // 4 - compute the new intermediate hash value (note '>>> 0' for 'addition modulo 2^32')
+            // 4 - compute the intermediate hash value
             H[0] = (H[0]+a) >>> 0
             H[1] = (H[1]+b) >>> 0
             H[2] = (H[2]+c) >>> 0
@@ -110,31 +112,23 @@ export class Sha256 {
             H[7] = (H[7]+h) >>> 0
         }
 
-        // convert H0..H7 to hex strings (with leading zeros)
+        // convert H^0,...,H^7 to hex strings (with leading zeros)
         for (let h=0; h<H.length; h++) {
             sha256Hash[h] = H[h].toString(16).slice(-8)
         }
         
-        // concatenate H0..H7, with separator if required
         const separator = optional.outFormat=='hex-w' ? ' ' : ''
-
         return sha256Hash.join(separator)
     }
 
 
 
-    /**
-     * Rotates right (circular right shift) value x by n positions [§3.2.4].
-     * @private
-     */
+    // Rotation
     static ROTR(n: number, x: number) {
         return (x >>> n) | (x << (32-n));
     }
 
-    /**
-     * Logical functions [§4.1.2].
-     * @private
-     */
+    // Logical functions
     static Σ0(x: number) { 
         return Sha256.ROTR(2,  x) ^ Sha256.ROTR(13, x) ^ Sha256.ROTR(22, x) 
     }
