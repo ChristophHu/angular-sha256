@@ -1,25 +1,24 @@
 import { Component } from '@angular/core'
-import { AES } from 'crypto-ts'
 import { Sha256 } from './sha256'
 
 @Component({
   selector: 'app-root',
   template: `
-    <input type="text" #input (input)="data">
+    <input type="text" #input>
+    <button (click)="toHash(input.value)"></button>
     <hr>
-    Hash: {{ hash }}  
+    Hash: {{ hash }}
   `,
   styles: []
 })
 
 export class AppComponent {
+  //hash: string = 'test'
   hash: string
 
-  constructor() {
-    this.hash = AES.encrypt('message', 'test').toString();
-    var test = Sha256.hash('test', 'string')
-    console.log(test)
-    const x = Sha256.hash('abc')
-    console.log(x)
+  constructor() {}
+
+  toHash(message: string) {
+    this.hash = Sha256.hash(message)
   }
 }
